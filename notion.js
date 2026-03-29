@@ -1,28 +1,24 @@
-// Vercel Serverless Function - 노션 API 프록시
-// CORS 문제 없이 Framer에서 노션 API 호출 가능
-
 const NOTION_API = "https://api.notion.com/v1"
-const NOTION_KEY = process.env.NOTION_API_KEY // Vercel 환경변수로 설정
+const NOTION_KEY = process.env.NOTION_API_KEY
 
 export default async function handler(req, res) {
-    // CORS 허용
     res.setHeader("Access-Control-Allow-Origin", "*")
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
     res.setHeader("Access-Control-Allow-Headers", "Content-Type")
 
-    // OPTIONS 프리플라이트 요청 처리
     if (req.method === "OPTIONS") {
         return res.status(200).end()
     }
 
-    const { path } = req.query
-    if (!path) {
-        return res.status(400).json({ error: "path가 필요합니다" })
+    // URL에서 /api/notion/ 이후 경로 추출
+    const fullPath = req.url.replace(/^\/api\/notion\/?/, "")
+
+    if (!fullPath) {
+        return res.status(400).json({ error: "경로가 필요합니다" })
     }
 
     try {
-        const url = `${NOTION_API}/${Array.isArray(path) ? path.join("/") : path}`
-
+        const url = `${NOTION_API}/${fullPath}`
         const response = await fetch(url, {
             method: req.method,
             headers: {
@@ -32,7 +28,6 @@ export default async function handler(req, res) {
             },
             body: req.method === "POST" ? JSON.stringify(req.body) : undefined,
         })
-
         const data = await response.json()
         return res.status(response.status).json(data)
     } catch (error) {
